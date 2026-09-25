@@ -34,7 +34,8 @@ from aiogram.types import (
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 # ---------------------------------------------------------------- تنظیمات
-load_dotenv()
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 ADMIN_GROUP_ID = int(os.getenv("ADMIN_GROUP_ID", "0") or 0)
@@ -44,6 +45,9 @@ CARD_HOLDER = os.getenv("CARD_HOLDER", "")
 PRICE_TEXT = os.getenv("PRICE_TEXT", "")
 PROXY = os.getenv("PROXY", "").strip()
 DB_PATH = os.getenv("DB_PATH", "consult.db")
+if not os.path.isabs(DB_PATH):
+    DB_PATH = os.path.join(BASE_DIR, DB_PATH)
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "").strip()
 MAX_PHOTOS = 5
 
 TOPICS = {
@@ -761,18 +765,29 @@ async def followup(m: Message, bot: Bot):
 
 
 # ---------------------------------------------------------------- اجرا
+def make_bot() -> Bot:
+    session = AiohttpSession(proxy=PROXY) if PROXY else None
+    return Bot(BOT_TOKEN, session=session, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+
+
+def make_dispatcher(storage=None) -> Dispatcher:
+    dp = Dispatcher(storage=storage or MemoryStorage())
+    _dp_ref["dp"] = dp
+    dp.include_router(admin)
+    dp.include_router(router)
+    return dp
+
+
 async def main():
+    """اجرا روی VPS با polling. (برای PythonAnywhere از flask_app.py استفاده می‌شود.)"""
     if not BOT_TOKEN:
         raise SystemExit("BOT_TOKEN در فایل .env تنظیم نشده است.")
     if not ADMIN_GROUP_ID:
         log.warning("ADMIN_GROUP_ID تنظیم نشده. بات را به گروه ادمین اضافه کنید و /id بزنید.")
     init_db()
-    session = AiohttpSession(proxy=PROXY) if PROXY else None
-    bot = Bot(BOT_TOKEN, session=session, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-    dp = Dispatcher(storage=MemoryStorage())
-    _dp_ref["dp"] = dp
-    dp.include_router(admin)
-    dp.include_router(router)
+    bot = make_bot()
+    dp = make_dispatcher()
+    await bot.delete_webhook(drop_pending_updates=False)
     me = await bot.get_me()
     log.info("Bot @%s started", me.username)
     await dp.start_polling(bot)

@@ -42,7 +42,40 @@
 2. بات را **ادمین** گروه کن (تا همه‌ی پیام‌ها را ببیند).
 3. بعد از اجرای بات (قدم ۳)، داخل گروه بنویس `/id` و عددی را که برمی‌گرداند در `ADMIN_GROUP_ID` بگذار و بات را ری‌استارت کن.
 
-### ۳. نصب روی سرور (VPS لینوکس، ترجیحاً خارج از ایران)
+### ۳ (رایگان). نصب روی PythonAnywhere
+
+در حساب رایگان PythonAnywhere بات با «وبهوک» اجرا می‌شود (`flask_app.py`) و وضعیت فرم‌ها در دیتابیس می‌ماند.
+
+1. **Consoles → Bash** را باز کن و بزن:
+   ```bash
+   git clone https://github.com/nimania/nima-consult-bot.git
+   cd nima-consult-bot
+   pip3.10 install --user -r requirements.txt
+   cp .env.example .env
+   ```
+2. **Files** → `nima-consult-bot/.env` را باز کن و پر کن:
+   `BOT_TOKEN`، `CARD_NUMBER`، `CARD_HOLDER`، `PRICE_TEXT`،
+   `PROXY=http://proxy.server:3128` (برای حساب رایگان لازم است)،
+   و `WEBHOOK_SECRET` = یک رمز تصادفی بلند از حروف و عدد انگلیسی.
+3. **Web → Add a new web app** → Manual configuration → Python 3.10.
+   در فایل WSGI (لینکش در همان صفحه است) همه‌چیز را پاک کن و این را بگذار (به‌جای USERNAME نام کاربری خودت):
+   ```python
+   import sys
+   path = "/home/USERNAME/nima-consult-bot"
+   if path not in sys.path:
+       sys.path.insert(0, path)
+   from flask_app import app as application
+   ```
+   بعد دکمه‌ی سبز **Reload** را بزن.
+4. در مرورگر باز کن: `https://USERNAME.pythonanywhere.com/setup/WEBHOOK_SECRET`
+   اگر «✅ وبهوک تنظیم شد» دیدی، بات روشن است.
+5. در گروه ادمین `/id` بزن، عدد را در `ADMIN_GROUP_ID` فایل `.env` بگذار و دوباره **Reload** کن.
+
+> حساب رایگان هر ۳ ماه یک بار در صفحه‌ی Web دکمه‌ی «Run until 3 months from today» می‌خواهد.
+
+به‌روزرسانی: در Bash بزن `cd nima-consult-bot && git pull` و بعد در صفحه‌ی Web دکمه‌ی Reload.
+
+### ۳ (VPS). نصب روی سرور لینوکس
 
 ```bash
 sudo apt update && sudo apt install -y python3 python3-venv git
