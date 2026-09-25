@@ -40,8 +40,11 @@ def webhook(secret):
     _check(secret)
     try:
         asyncio.run(_process(request.get_json(force=True)))
-    except Exception:
+    except Exception as e:
         B.log.exception("update failed")
+        if B.is_network_error(e):
+            # تلگرام همین پیام را کمی بعد دوباره می‌فرستد
+            return "retry later", 503
     return "ok"
 
 

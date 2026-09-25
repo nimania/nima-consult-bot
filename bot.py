@@ -782,8 +782,37 @@ async def followup(m: Message, bot: Bot, state: FSMContext):
 
 
 # ---------------------------------------------------------------- اجرا
+class RetrySession(AiohttpSession):
+    """اتصال PythonAnywhere به تلگرام گاهی چند ثانیه قطع می‌شود؛ درخواست را چند بار تکرار می‌کنیم."""
+
+    async def make_request(self, bot, method, timeout=None):
+        from aiogram.exceptions import TelegramAPIError, TelegramNetworkError
+        delay = 1.0
+        for attempt in range(4):
+            try:
+                return await super().make_request(bot, method, timeout)
+            except TelegramAPIError as e:
+                if not isinstance(e, TelegramNetworkError):
+                    raise
+                err = e
+            except Exception as e:  # خطای پروکسی/شبکه
+                err = e
+            log.warning("network error (try %s): %s", attempt + 1, err)
+            await asyncio.sleep(delay)
+            delay *= 2
+        raise err
+
+
+def is_network_error(e: BaseException) -> bool:
+    from aiogram.exceptions import TelegramAPIError, TelegramNetworkError
+    if isinstance(e, TelegramNetworkError):
+        return True
+    return not isinstance(e, TelegramAPIError) and isinstance(e, (OSError, asyncio.TimeoutError)) or \
+        type(e).__module__.startswith(("aiohttp", "aiohttp_socks", "python_socks"))
+
+
 def make_bot() -> Bot:
-    session = AiohttpSession(proxy=PROXY) if PROXY else None
+    session = RetrySession(proxy=PROXY) if PROXY else None
     return Bot(BOT_TOKEN, session=session, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
 
