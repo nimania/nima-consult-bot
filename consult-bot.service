@@ -1,0 +1,15 @@
+[Unit]
+Description=Nima consult Telegram bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/nima-consult-bot
+ExecStart=/opt/nima-consult-bot/venv/bin/python bot.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
